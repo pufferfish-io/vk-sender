@@ -1,0 +1,44 @@
+name: 🐳 Build & Push vk-sender (on tag)
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  docker:
+    name: 🛠 Build and Push Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+    steps:
+      - name: 🔽 Checkout source
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login to GitHub Container Registry (GHCR)
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: ⏱️ Build metadata
+        id: meta
+        run: |
+          echo "TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          echo "BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: 🐳 Build & Push (${{ env.IMAGE }})
+        run: |
+          echo "📦 Building and pushing: $IMAGE"
+          docker build \
+            --build-arg VERSION="${TAG}" \
+            --build-arg COMMIT="${SHORT_SHA}" \
+            --build-arg BUILT_AT="${BUILT_AT}" \
+            -t "$IMAGE" .
+          docker push "$IMAGE"
+

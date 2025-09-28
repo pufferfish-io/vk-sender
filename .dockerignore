@@ -1,0 +1,56 @@
+# VCS and IDE
+.git
+.github
+.vscode
+.idea
+.fleet
+.DS_Store
+**/.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+config.yaml
+client.properties
+secrets/
+*.pem
+*.key
+*.p12
+*.cert
+*.crt
+*.csr
+*_secret*
+*secret*.txt
+
+# Build and test artifacts
+bin/
+dist/
+out/
+build/
+coverage/
+*.cover
+*.coverprofile
+*.cov
+*.lcov
+*.log
+vkforwarder
+message-responder
+app
+
+# Go specifics
+vendor/
+**/*_test.go
+
+# Docker tooling (not needed for image build)
+docker-compose.yml
+docker-compose.*.yml
+
+# OS/editor junk
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.bak
+
+.gocache
+vk-sender
