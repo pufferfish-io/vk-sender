@@ -25,9 +25,9 @@ type Vk struct {
 }
 
 type Config struct {
-	Kafka  Kafka  `envPrefix:"VKSENDER_KAFKA_"`
 	Server Server `envPrefix:"VKSENDER_SERVER_"`
-	VK     Vk     `envPrefix:"VKSENDER_VK_"`
+	Kafka  Kafka  `envPrefix:"KAFKA_"`
+	VK     Vk     `envPrefix:"VK_"`
 }
 
 func Load() (*Config, error) {
