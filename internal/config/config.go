@@ -9,8 +9,8 @@ import (
 
 type Kafka struct {
 	BootstrapServersValue  string `validate:"required" env:"BOOTSTRAP_SERVERS_VALUE"`
-	VkMessageTopicName     string `validate:"required" env:"VK_MESSAGE_TOPIC_NAME"`
-	ResponseMessageGroupID string `validate:"required" env:"RESPONSE_MESSAGE_GROUP_ID"`
+	VkMessageTopicName     string `validate:"required" env:"TOPIC_NAME_VK_REQUEST_MESSAGE"`
+	ResponseMessageGroupID string `validate:"required" env:"GROUP_ID_VK_SENDER"`
 	SaslUsername           string `env:"SASL_USERNAME"`
 	SaslPassword           string `env:"SASL_PASSWORD"`
 	ClientID               string `env:"CLIENT_ID"`
@@ -25,7 +25,7 @@ type Vk struct {
 }
 
 type Config struct {
-	Server Server `envPrefix:"VKSENDER_SERVER_"`
+	Server Server `envPrefix:"VK_SENDER_SERVER_"`
 	Kafka  Kafka  `envPrefix:"KAFKA_"`
 	VK     Vk     `envPrefix:"VK_"`
 }
