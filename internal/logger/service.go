@@ -3,6 +3,7 @@ package logger
 import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"time"
 )
 
 type Logger interface {
@@ -17,9 +18,13 @@ type ZapLogger struct {
 
 func NewZapLogger() (*ZapLogger, func()) {
 	cfg := zap.NewProductionConfig()
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.EncodeTime = localISOTimeEncoder
 	l, _ := cfg.Build()
 	return &ZapLogger{log: l.Sugar()}, func() { _ = l.Sync() }
+}
+
+func localISOTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	enc.AppendString(t.In(time.Local).Format(time.RFC3339))
 }
 
 func (z *ZapLogger) Info(msg string, args ...any)  { z.log.Infof(msg, args...) }
