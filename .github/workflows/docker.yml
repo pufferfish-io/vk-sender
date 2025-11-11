@@ -17,6 +17,7 @@ jobs:
 
     env:
       IMAGE: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+      IMAGE_LATEST: ghcr.io/${{ github.repository }}:latest
 
     steps:
       - name: 🔽 Checkout source
@@ -39,6 +40,7 @@ jobs:
             --build-arg VERSION="${TAG}" \
             --build-arg COMMIT="${SHORT_SHA}" \
             --build-arg BUILT_AT="${BUILT_AT}" \
-            -t "$IMAGE" .
+            -t "$IMAGE" \
+            -t "$IMAGE_LATEST" .
           docker push "$IMAGE"
-
+          docker push "$IMAGE_LATEST"

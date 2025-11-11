@@ -40,6 +40,7 @@ func main() {
 		SaslUsername: conf.Kafka.SaslUsername,
 		SaslPassword: conf.Kafka.SaslPassword,
 		ClientID:     conf.Kafka.ClientID,
+		Context:      ctx,
 	})
 	if err != nil {
 		lg.Error("❌ Failed to create consumer: %v", err)
