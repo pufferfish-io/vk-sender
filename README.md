@@ -1,63 +1,38 @@
 # vk-sender
 
-## Command Guide
+## Что делает
 
-### Run with exported .env (one‑liner)
+1. Подписывается на Kafka-топик `TOPIC_NAME_VK_REQUEST_MESSAGE` в группе `GROUP_ID_VK_SENDER`.
+2. Каждое сообщение десериализует в `contract.SendMessageRequest`, подготавливает параметры `peer_id`, `message`, `random_id` и `access_token`.
+3. Отправляет POST-запрос к `https://api.vk.com/method/messages.send` с `application/x-www-form-urlencoded`.
+4. Возвращает ошибку, если VK API ответил статусом ≥300 или вернул JSON с `error`, чтобы `runConsumerSupervisor` мог перезапустить поток.
 
-Exports all variables from `.env` into the current shell and runs the service.
+## Запуск
 
-```
-export $(cat .env | xargs) && go run ./cmd/vk-sender
-```
+1. Установи переменные окружения (например, `set -a && source .env && set +a`).
+2. Собери и запусти локально:
+   ```bash
+   go run ./cmd/vk-sender
+   ```
+3. Либо собери Docker-образ и запусти его:
+   ```bash
+   docker build -t vk-sender .
+   docker run --rm -e ... vk-sender
+   ```
 
-### Run with `source` (safer for complex values)
+## Переменные окружения
 
-Loads `.env` preserving quotes and special characters, then runs the service.
+Все обязательны, кроме SASL, если Kafka открыта.
 
-```
-set -a && source .env && set +a && go run ./cmd/vk-sender
-```
+- `KAFKA_BOOTSTRAP_SERVERS_VALUE` — список брокеров `host:port[,host:port]`.
+- `KAFKA_TOPIC_NAME_VK_REQUEST_MESSAGE` — топик для `SendMessageRequest`, откуда читается consumer.
+- `KAFKA_GROUP_ID_VK_SENDER` — consumer group id.
+- `KAFKA_CLIENT_ID_VK_SENDER` — client id (producer+consumer) для метрик.
+- `KAFKA_SASL_USERNAME` и `KAFKA_SASL_PASSWORD` — если Kafka требует SASL/SCRAM.
+- `VK_TOKEN` — токен сообщества/бота для `access_token` при вызове API.
 
-### Fetch/clean module deps
+## Примечания
 
-Resolves dependencies and prunes unused ones.
-
-```
-go mod tidy
-```
-
-### Verbose build (diagnostics)
-
-Builds the binary with verbose and command tracing. Removes old binary after build to keep the tree clean.
-
-```
-go build -v -x ./cmd/vk-sender && rm -f vk-sender
-```
-
-### Docker build (Buildx)
-
-Builds the image with detailed progress logs and without cache.
-
-```
-docker buildx build --no-cache --progress=plain .
-```
-
-### Create and push tag
-
-Cuts a release tag and pushes it to remote.
-
-```
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-### Manage tags
-
-List all tags, delete a tag locally and remotely, verify deletion.
-
-```
-git tag -l
-git tag -d vX.Y.Z
-git push --delete origin vX.Y.Z
-git ls-remote --tags origin | grep 'refs/tags/vX.Y.Z$'
-```
+- `random_id` генерируется через `crypto/rand` (см. `internal/processor/vk-message-sender.go`), чтобы VK API не отвергнул дубликаты.
+- Ответы VK API парсятся в `vkAPIResponse`, и при наличии `error` сервис возвращает ошибку.
+- Сообщения отправляются синхронно, логируются (peer_id и статус) и в случае неудачи переотправляются через supervisor.
