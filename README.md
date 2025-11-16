@@ -1,38 +1,31 @@
-# vk-sender
+```mermaid
+flowchart LR
+  QUEUE["Kafka: vk_request_message"] --> SENDER["vk-sender"]
+  SENDER --> VKAPI["VK API"]
+  VKAPI --> USER["Получатель"]
+```
 
-## Что делает
+## О приложении
 
-1. Подписывается на Kafka-топик `TOPIC_NAME_VK_REQUEST_MESSAGE` в группе `GROUP_ID_VK_SENDER`.
-2. Каждое сообщение десериализует в `contract.SendMessageRequest`, подготавливает параметры `peer_id`, `message`, `random_id` и `access_token`.
-3. Отправляет POST-запрос к `https://api.vk.com/method/messages.send` с `application/x-www-form-urlencoded`.
-4. Возвращает ошибку, если VK API ответил статусом ≥300 или вернул JSON с `error`, чтобы `runConsumerSupervisor` мог перезапустить поток.
+vk-sender потребляет `SendMessageRequest` из Kafka и вызывает метод `messages.send` VK API. Он собирает HTTP‑запрос, добавляет `random_id`, обрабатывает JSON‑ответ и логирует ошибки, чтобы supervisor мог перезапустить подписку.
 
-## Запуск
+## Роль приложения в архитектуре проекта
 
-1. Установи переменные окружения (например, `set -a && source .env && set +a`).
-2. Собери и запусти локально:
+Это завершающий элемент VK‑конвейера:
+```
+... → vk-response-preparer → vk-sender
+```
+Все предыдущие сервисы уже решили, что и куда отправить; sender взаимодействует только с внешним API и гарантирует доставку пользователю.
+
+## Локальный запуск
+
+1. Требования: Go ≥ 1.24, Kafka и токен сообщества VK с правами отправки сообщений.
+2. Экспортируйте переменные:
+   - `KAFKA_BOOTSTRAP_SERVERS_VALUE`, `KAFKA_TOPIC_NAME_VK_REQUEST_MESSAGE`, `KAFKA_GROUP_ID_VK_SENDER`, `KAFKA_CLIENT_ID_VK_SENDER`, опционально `KAFKA_SASL_USERNAME`/`KAFKA_SASL_PASSWORD`.
+   - `VK_TOKEN` — access token для `messages.send`.
+3. Запустите:
    ```bash
    go run ./cmd/vk-sender
    ```
-3. Либо собери Docker-образ и запусти его:
-   ```bash
-   docker build -t vk-sender .
-   docker run --rm -e ... vk-sender
-   ```
-
-## Переменные окружения
-
-Все обязательны, кроме SASL, если Kafka открыта.
-
-- `KAFKA_BOOTSTRAP_SERVERS_VALUE` — список брокеров `host:port[,host:port]`.
-- `KAFKA_TOPIC_NAME_VK_REQUEST_MESSAGE` — топик для `SendMessageRequest`, откуда читается consumer.
-- `KAFKA_GROUP_ID_VK_SENDER` — consumer group id.
-- `KAFKA_CLIENT_ID_VK_SENDER` — client id (producer+consumer) для метрик.
-- `KAFKA_SASL_USERNAME` и `KAFKA_SASL_PASSWORD` — если Kafka требует SASL/SCRAM.
-- `VK_TOKEN` — токен сообщества/бота для `access_token` при вызове API.
-
-## Примечания
-
-- `random_id` генерируется через `crypto/rand` (см. `internal/processor/vk-message-sender.go`), чтобы VK API не отвергнул дубликаты.
-- Ответы VK API парсятся в `vkAPIResponse`, и при наличии `error` сервис возвращает ошибку.
-- Сообщения отправляются синхронно, логируются (peer_id и статус) и в случае неудачи переотправляются через supervisor.
+   или через Docker.
+4. Следите за логами: при успехе появится запись `✅ Message sent`, при ошибках VK API приложение вернёт ошибку и supervisor перезапустит consumer. Убедитесь, что `vk-response-preparer` пишет заявки в `KAFKA_TOPIC_NAME_VK_REQUEST_MESSAGE`.
